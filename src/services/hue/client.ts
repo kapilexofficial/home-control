@@ -1,8 +1,10 @@
 const HUE_BRIDGE_IP = process.env.HUE_BRIDGE_IP || "";
+const HUE_BRIDGE_URL = process.env.HUE_BRIDGE_URL || "";
 const HUE_API_KEY = process.env.HUE_API_KEY || "";
 
 function getBaseUrl() {
-  return `http://${HUE_BRIDGE_IP}/api/${HUE_API_KEY}`;
+  const host = HUE_BRIDGE_URL || `http://${HUE_BRIDGE_IP}`;
+  return `${host}/api/${HUE_API_KEY}`;
 }
 
 export interface HueLight {
