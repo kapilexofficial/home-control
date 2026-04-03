@@ -317,54 +317,47 @@ export default function DashboardPage() {
                     <span className="text-[11px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">{buttons.length}</span>
                   </div>
                   {buttons.length > 0 ? (
-                    <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
                       {buttons.map((btn) => {
                         const isOn = btn.state === "on";
                         const isAvailable = btn.online && btn.state !== "unavailable";
+                        const isHueBtn = btn.id.startsWith("hue-btn-");
                         const roomConfig = ROOM_CONFIG.find((r) => r.id === btn.roomId);
                         const colors = ROOM_COLORS[btn.roomId || ""] || DEFAULT_ROOM_COLOR;
                         return (
                           <div key={btn.id} className={cn(
-                            "rounded-xl p-3.5 transition-all duration-300 border border-transparent flex items-center gap-3",
-                            isOn ? "bg-indigo-400/[0.04] border-indigo-400/10" : "bg-secondary/30",
-                            !isAvailable && "opacity-35"
-                          )}>
-                            {/* Button illustration */}
-                            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", isOn ? "bg-indigo-400/15" : "bg-secondary")}>
-                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={isOn ? "#818cf8" : "#444"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={isOn ? "opacity-100" : "opacity-40"}>
-                                <circle cx="12" cy="12" r="10" />
-                                <circle cx="12" cy="12" r="4" fill={isOn ? "#818cf8" : "none"} />
-                              </svg>
+                            "rounded-xl p-4 transition-all duration-300 border border-transparent flex flex-col items-center justify-center gap-2 aspect-square",
+                            isOn ? "bg-indigo-400/[0.06] border-indigo-400/15" : "bg-secondary/30",
+                            !isAvailable && "opacity-35",
+                            !isHueBtn && "cursor-pointer"
+                          )}
+                          onClick={!isHueBtn && isAvailable ? () => toggle(btn.id, !isOn) : undefined}
+                          >
+                            {/* Icon */}
+                            <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center", isOn ? "bg-indigo-400/15" : "bg-secondary")}>
+                              {isHueBtn ? (
+                                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={isOn ? "#818cf8" : "#555"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <rect x="5" y="5" width="14" height="14" rx="3" />
+                                  <circle cx="12" cy="12" r="3.5" fill={isOn ? "#818cf8" : "none"} />
+                                </svg>
+                              ) : (
+                                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={isOn ? "#818cf8" : "#555"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                  <circle cx="12" cy="12" r="10" />
+                                  <circle cx="12" cy="12" r="4" fill={isOn ? "#818cf8" : "none"} />
+                                </svg>
+                              )}
                             </div>
 
-                            {/* Name + room */}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">{btn.name}</p>
-                              <p className={cn("text-[11px]", colors.accent)}>{roomConfig?.name || ""}</p>
-                            </div>
+                            {/* Name */}
+                            <p className="text-[12px] font-medium text-center truncate w-full">{btn.name}</p>
 
-                            {/* Status / Battery for Hue buttons */}
-                            {btn.id.startsWith("hue-btn-") ? (
-                              <div className="text-right shrink-0">
-                                <p className="text-[11px] text-muted-foreground">{String(btn.attributes?.lastEvent || "")}</p>
-                                {btn.attributes?.battery != null && (
-                                  <p className="text-[10px] text-muted-foreground/60">{String(btn.attributes.battery)}%</p>
-                                )}
-                              </div>
+                            {/* Status */}
+                            {isHueBtn ? (
+                              <p className="text-[10px] text-muted-foreground">{btn.attributes?.battery != null ? String(btn.attributes.battery) + "%" : ""}</p>
                             ) : (
-                              <div className="flex items-center gap-2 shrink-0">
-                                <span className={cn("text-xs font-medium", isOn ? "text-indigo-400" : "text-muted-foreground")}>
-                                  {!isAvailable ? "Offline" : isOn ? "ON" : "OFF"}
-                                </span>
-                                <button onClick={() => toggle(btn.id, !isOn)} disabled={!isAvailable}
-                                  className={cn(
-                                    "relative w-14 h-8 rounded-lg transition-all border flex items-center justify-center",
-                                    isOn ? "bg-indigo-400/20 border-indigo-400/30 text-indigo-400" : "bg-muted border-border text-muted-foreground",
-                                    !isAvailable && "cursor-not-allowed opacity-40"
-                                  )}>
-                                  <span className="text-[10px] font-bold tracking-wider">{isOn ? "ON" : "OFF"}</span>
-                                </button>
-                              </div>
+                              <span className={cn("text-[10px] font-semibold", isOn ? "text-indigo-400" : "text-muted-foreground")}>
+                                {!isAvailable ? "Offline" : isOn ? "ON" : "OFF"}
+                              </span>
                             )}
                           </div>
                         );
