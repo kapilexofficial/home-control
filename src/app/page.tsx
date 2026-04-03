@@ -317,56 +317,57 @@ export default function DashboardPage() {
                     <span className="text-[11px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">{buttons.length}</span>
                   </div>
                   {buttons.length > 0 ? (
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-3">
                       {buttons.map((btn) => {
-                        const isOn = btn.state === "on";
-                        const isAvailable = btn.online && btn.state !== "unavailable";
                         const isHueBtn = btn.id.startsWith("hue-btn-");
-                        const roomConfig = ROOM_CONFIG.find((r) => r.id === btn.roomId);
-                        const colors = ROOM_COLORS[btn.roomId || ""] || DEFAULT_ROOM_COLOR;
+                        // For Hue button: check if linked room lights are on
+                        const hueBtnLights = isHueBtn ? allDevices.filter((d) =>
+                          d.platform === "hue" && d.type === DeviceType.LIGHT &&
+                          (d.id === "hue-9" || d.id === "hue-7")
+                        ) : [];
+                        const isOn = isHueBtn ? hueBtnLights.some((l) => l.state === "on") : btn.state === "on";
+                        const isAvailable = isHueBtn ? btn.online : btn.online && btn.state !== "unavailable";
+
+                        const handleClick = () => {
+                          if (!isAvailable) return;
+                          if (isHueBtn) {
+                            // Toggle all linked lights
+                            hueBtnLights.forEach((l) => toggle(l.id, !isOn));
+                          } else {
+                            toggle(btn.id, !isOn);
+                          }
+                        };
+
                         return (
                           <div key={btn.id} className={cn(
-                            "rounded-xl p-4 transition-all duration-300 border border-transparent flex flex-col items-center justify-center gap-2 aspect-square",
+                            "rounded-xl p-3 transition-all duration-300 border border-transparent flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95",
                             isOn ? "bg-indigo-400/[0.06] border-indigo-400/15" : "bg-secondary/30",
-                            !isAvailable && "opacity-35",
-                            !isHueBtn && "cursor-pointer"
+                            !isAvailable && "opacity-35 cursor-not-allowed"
                           )}
-                          onClick={!isHueBtn && isAvailable ? () => toggle(btn.id, !isOn) : undefined}
+                          onClick={handleClick}
                           >
                             {/* Power button icon - metallic 3D style */}
-                            <div className="relative w-16 h-16 flex items-center justify-center">
-                              {/* Outer metallic ring */}
+                            <div className="relative w-14 h-14 flex items-center justify-center">
                               <div className={cn(
                                 "absolute inset-0 rounded-full",
                                 isOn
                                   ? "bg-gradient-to-b from-indigo-300 via-indigo-400 to-indigo-600 shadow-[0_0_15px_rgba(129,140,248,0.4)]"
                                   : "bg-gradient-to-b from-zinc-400 via-zinc-500 to-zinc-700"
                               )} />
-                              {/* Inner dark circle */}
                               <div className={cn(
-                                "absolute inset-[5px] rounded-full bg-gradient-to-b shadow-inner",
-                                isOn
-                                  ? "from-zinc-900 via-zinc-950 to-black"
-                                  : "from-zinc-800 via-zinc-900 to-black"
+                                "absolute inset-[4px] rounded-full bg-gradient-to-b shadow-inner",
+                                isOn ? "from-zinc-900 via-zinc-950 to-black" : "from-zinc-800 via-zinc-900 to-black"
                               )} />
-                              {/* Power symbol */}
-                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="relative z-10">
+                              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" className="relative z-10">
                                 <path d="M12 3v8" stroke={isOn ? "#818cf8" : "#999"} strokeWidth="2.5" strokeLinecap="round" />
                                 <path d="M17.5 6.5a8 8 0 1 1-11 0" stroke={isOn ? "#818cf8" : "#999"} strokeWidth="2.5" strokeLinecap="round" fill="none" />
                               </svg>
                             </div>
 
-                            {/* Name */}
-                            <p className="text-[12px] font-medium text-center truncate w-full">{btn.name}</p>
-
-                            {/* Status */}
-                            {isHueBtn ? (
-                              <p className="text-[10px] text-muted-foreground">{btn.attributes?.battery != null ? String(btn.attributes.battery) + "%" : ""}</p>
-                            ) : (
-                              <span className={cn("text-[10px] font-semibold", isOn ? "text-indigo-400" : "text-muted-foreground")}>
-                                {!isAvailable ? "Offline" : isOn ? "ON" : "OFF"}
-                              </span>
-                            )}
+                            <p className="text-[11px] font-medium text-center truncate w-full">{btn.name}</p>
+                            <span className={cn("text-[10px] font-semibold", isOn ? "text-indigo-400" : "text-muted-foreground")}>
+                              {!isAvailable ? "Offline" : isOn ? "ON" : "OFF"}
+                            </span>
                           </div>
                         );
                       })}
