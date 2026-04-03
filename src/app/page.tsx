@@ -44,7 +44,8 @@ function useCurrentTime() {
 export default function DashboardPage() {
   const [activeRoom, setActiveRoom] = useState("all");
   const { data: devices, isLoading } = useDevices();
-  const { toggle, setBrightness } = useCommand();
+  const { toggle, setBrightness, sendCommand } = useCommand();
+  const [hueBtnSceneIndex, setHueBtnSceneIndex] = useState(-1);
   const now = useCurrentTime();
 
   const { data: weather } = useQuery({
@@ -328,11 +329,32 @@ export default function DashboardPage() {
                         const isOn = isHueBtn ? hueBtnLights.some((l) => l.state === "on") : btn.state === "on";
                         const isAvailable = isHueBtn ? btn.online : btn.online && btn.state !== "unavailable";
 
+                        const HUE_BTN_SCENES = [
+                          { id: "09o8DYaHz37aT84H", name: "Energizar" },
+                          { id: "-5h5lqg0s8DNaqCl", name: "Concentrar" },
+                          { id: "yQirFz2Nj1nTXuuP", name: "Leitura" },
+                          { id: "swdiPp3coFXr1Gf7", name: "Relaxar" },
+                          { id: "Rv4amZzcduLaDBEH", name: "Luz noturna" },
+                        ];
+                        const currentScene = isHueBtn ? HUE_BTN_SCENES[hueBtnSceneIndex] : null;
+
                         const handleClick = () => {
                           if (!isAvailable) return;
                           if (isHueBtn) {
-                            // Toggle all linked lights
-                            hueBtnLights.forEach((l) => toggle(l.id, !isOn));
+                            const nextIndex = hueBtnSceneIndex + 1;
+                            if (!isOn || nextIndex >= HUE_BTN_SCENES.length) {
+                              // If off -> first scene; if last scene -> turn off
+                              if (!isOn) {
+                                setHueBtnSceneIndex(0);
+                                sendCommand(btn.id, "scene", HUE_BTN_SCENES[0].id);
+                              } else {
+                                setHueBtnSceneIndex(-1);
+                                sendCommand(btn.id, "off", true);
+                              }
+                            } else {
+                              setHueBtnSceneIndex(nextIndex);
+                              sendCommand(btn.id, "scene", HUE_BTN_SCENES[nextIndex].id);
+                            }
                           } else {
                             toggle(btn.id, !isOn);
                           }
@@ -366,7 +388,7 @@ export default function DashboardPage() {
 
                             <p className="text-[11px] font-medium text-center truncate w-full">{btn.name}</p>
                             <span className={cn("text-[10px] font-semibold", isOn ? "text-indigo-400" : "text-muted-foreground")}>
-                              {!isAvailable ? "Offline" : isOn ? "ON" : "OFF"}
+                              {!isAvailable ? "Offline" : isHueBtn && currentScene ? currentScene.name : isOn ? "ON" : "OFF"}
                             </span>
                           </div>
                         );

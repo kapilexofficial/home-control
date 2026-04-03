@@ -83,6 +83,22 @@ export async function getHueSensors(): Promise<HueSensor[]> {
     }));
 }
 
+export async function activateHueScene(groupId: string, sceneId: string) {
+  const res = await fetch(`${getBaseUrl()}/groups/${groupId}/action`, {
+    method: "PUT",
+    body: JSON.stringify({ scene: sceneId }),
+  });
+  return res.json();
+}
+
+export async function setHueGroupState(groupId: string, state: Record<string, unknown>) {
+  const res = await fetch(`${getBaseUrl()}/groups/${groupId}/action`, {
+    method: "PUT",
+    body: JSON.stringify(state),
+  });
+  return res.json();
+}
+
 export async function setHueLightState(
   lightId: string,
   state: Record<string, unknown>

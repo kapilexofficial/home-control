@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { sendCommand as sendTuyaCommand } from "@/services/tuya/client";
-import { setHueLightState } from "@/services/hue/client";
+import { setHueLightState, activateHueScene, setHueGroupState } from "@/services/hue/client";
 import { setHubSpaceAttribute } from "@/services/hubspace/client";
 
 export async function POST(
@@ -19,6 +19,19 @@ export async function POST(
         { error: "Commands array is required" },
         { status: 400 }
       );
+    }
+
+    // Hue button - activate scene or turn off group
+    if (deviceId.startsWith("hue-btn-")) {
+      for (const cmd of commands) {
+        if (cmd.code === "scene") {
+          await activateHueScene("82", cmd.value as string);
+        }
+        if (cmd.code === "off") {
+          await setHueGroupState("82", { on: false });
+        }
+      }
+      return NextResponse.json({ success: true });
     }
 
     // Route to correct platform based on device ID prefix
