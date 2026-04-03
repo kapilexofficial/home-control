@@ -333,19 +333,27 @@ export default function DashboardPage() {
                           )}
                           onClick={!isHueBtn && isAvailable ? () => toggle(btn.id, !isOn) : undefined}
                           >
-                            {/* Icon */}
-                            <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center", isOn ? "bg-indigo-400/15" : "bg-secondary")}>
-                              {isHueBtn ? (
-                                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={isOn ? "#818cf8" : "#555"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                  <rect x="5" y="5" width="14" height="14" rx="3" />
-                                  <circle cx="12" cy="12" r="3.5" fill={isOn ? "#818cf8" : "none"} />
-                                </svg>
-                              ) : (
-                                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke={isOn ? "#818cf8" : "#555"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                  <circle cx="12" cy="12" r="10" />
-                                  <circle cx="12" cy="12" r="4" fill={isOn ? "#818cf8" : "none"} />
-                                </svg>
-                              )}
+                            {/* Power button icon - metallic 3D style */}
+                            <div className="relative w-16 h-16 flex items-center justify-center">
+                              {/* Outer metallic ring */}
+                              <div className={cn(
+                                "absolute inset-0 rounded-full",
+                                isOn
+                                  ? "bg-gradient-to-b from-indigo-300 via-indigo-400 to-indigo-600 shadow-[0_0_15px_rgba(129,140,248,0.4)]"
+                                  : "bg-gradient-to-b from-zinc-400 via-zinc-500 to-zinc-700"
+                              )} />
+                              {/* Inner dark circle */}
+                              <div className={cn(
+                                "absolute inset-[5px] rounded-full bg-gradient-to-b shadow-inner",
+                                isOn
+                                  ? "from-zinc-900 via-zinc-950 to-black"
+                                  : "from-zinc-800 via-zinc-900 to-black"
+                              )} />
+                              {/* Power symbol */}
+                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="relative z-10">
+                                <path d="M12 3v8" stroke={isOn ? "#818cf8" : "#999"} strokeWidth="2.5" strokeLinecap="round" />
+                                <path d="M17.5 6.5a8 8 0 1 1-11 0" stroke={isOn ? "#818cf8" : "#999"} strokeWidth="2.5" strokeLinecap="round" fill="none" />
+                              </svg>
                             </div>
 
                             {/* Name */}
