@@ -54,6 +54,35 @@ export async function getHueGroups(): Promise<HueGroup[]> {
     }));
 }
 
+export interface HueSensor {
+  id: string;
+  name: string;
+  type: string;
+  modelid: string;
+  productname: string;
+  state: {
+    buttonevent?: number;
+    lastupdated: string;
+  };
+  config: {
+    on: boolean;
+    battery?: number;
+    reachable: boolean;
+  };
+}
+
+export async function getHueSensors(): Promise<HueSensor[]> {
+  const res = await fetch(`${getBaseUrl()}/sensors`);
+  const data = await res.json();
+
+  return Object.entries(data)
+    .filter(([, sensor]) => (sensor as { type: string }).type === "ZLLSwitch")
+    .map(([id, sensor]) => ({
+      id,
+      ...(sensor as Omit<HueSensor, "id">),
+    }));
+}
+
 export async function setHueLightState(
   lightId: string,
   state: Record<string, unknown>

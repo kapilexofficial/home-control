@@ -1,6 +1,6 @@
 import type { Device } from "@/types/device";
 import { DeviceType } from "@/types/device";
-import type { HueLight, HueGroup } from "./client";
+import type { HueLight, HueGroup, HueSensor } from "./client";
 
 export function mapHueLight(
   light: HueLight,
@@ -43,4 +43,33 @@ export function mapHueLightsWithRooms(
   return lights.map((light) =>
     mapHueLight(light, lightRoomMap.get(light.id) || null)
   );
+}
+
+const BUTTON_EVENTS: Record<number, string> = {
+  1000: "Pressionado",
+  1001: "Segurando",
+  1002: "Clique curto",
+  1003: "Clique longo",
+  1004: "Segurando longo",
+};
+
+export function mapHueSensor(sensor: HueSensor): Device {
+  const lastEvent = sensor.state.buttonevent;
+
+  return {
+    id: `hue-btn-${sensor.id}`,
+    name: sensor.name,
+    type: DeviceType.SWITCH,
+    state: sensor.config.on ? "on" : "off",
+    roomId: null,
+    attributes: {
+      battery: sensor.config.battery,
+      lastEvent: lastEvent ? BUTTON_EVENTS[lastEvent] || `Evento ${lastEvent}` : undefined,
+      lastUpdated: sensor.state.lastupdated,
+      model: sensor.productname,
+    },
+    online: sensor.config.reachable,
+    lastUpdated: sensor.state.lastupdated || new Date().toISOString(),
+    platform: "hue",
+  };
 }

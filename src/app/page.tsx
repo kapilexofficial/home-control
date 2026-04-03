@@ -70,8 +70,9 @@ export default function DashboardPage() {
   const sensors = onlineDevices.filter((d) => d.type === DeviceType.SENSOR);
   const lights = onlineDevices.filter((d) => d.type === DeviceType.LIGHT);
   const buttons = onlineDevices.filter((d) =>
-    (d.type === DeviceType.SWITCH || d.type === DeviceType.LOCK || d.type === DeviceType.COVER) &&
-    (d.name.toLowerCase().includes("portão") || d.name.toLowerCase().includes("portao") || d.name.toLowerCase().includes("garagem"))
+    d.id.startsWith("hue-btn-") ||
+    ((d.type === DeviceType.SWITCH || d.type === DeviceType.LOCK || d.type === DeviceType.COVER) &&
+    (d.name.toLowerCase().includes("portão") || d.name.toLowerCase().includes("portao") || d.name.toLowerCase().includes("garagem") || d.name.toLowerCase().includes("gate") || d.roomId === "garagem"))
   );
   const switches = onlineDevices.filter((d) =>
     (d.type === DeviceType.SWITCH || d.type === DeviceType.LOCK || d.type === DeviceType.FAN) &&
@@ -309,13 +310,13 @@ export default function DashboardPage() {
                 )}
 
                 {/* BOTOES */}
-                {buttons.length > 0 && (
-                  <div className="card-dark rounded-2xl p-5 flex-1 self-start w-full">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-2.5 h-2.5 rounded-full bg-indigo-400" />
-                      <span className="text-base font-semibold">Botões</span>
-                      <span className="text-[11px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">{buttons.length}</span>
-                    </div>
+                <div className="card-dark rounded-2xl p-5 flex-1 self-start w-full min-h-[150px]">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-2.5 h-2.5 rounded-full bg-indigo-400" />
+                    <span className="text-base font-semibold">Botões</span>
+                    <span className="text-[11px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">{buttons.length}</span>
+                  </div>
+                  {buttons.length > 0 ? (
                     <div className="space-y-2">
                       {buttons.map((btn) => {
                         const isOn = btn.state === "on";
@@ -342,26 +343,39 @@ export default function DashboardPage() {
                               <p className={cn("text-[11px]", colors.accent)}>{roomConfig?.name || ""}</p>
                             </div>
 
-                            {/* Status */}
-                            <span className={cn("text-xs font-medium", isOn ? "text-indigo-400" : "text-muted-foreground")}>
-                              {!isAvailable ? "Offline" : isOn ? "ON" : "OFF"}
-                            </span>
-
-                            {/* Push Button Style */}
-                            <button onClick={() => toggle(btn.id, !isOn)} disabled={!isAvailable}
-                              className={cn(
-                                "relative w-14 h-8 rounded-lg shrink-0 transition-all border flex items-center justify-center",
-                                isOn ? "bg-indigo-400/20 border-indigo-400/30 text-indigo-400" : "bg-muted border-border text-muted-foreground",
-                                !isAvailable && "cursor-not-allowed opacity-40"
-                              )}>
-                              <span className="text-[10px] font-bold tracking-wider">{isOn ? "ON" : "OFF"}</span>
-                            </button>
+                            {/* Status / Battery for Hue buttons */}
+                            {btn.id.startsWith("hue-btn-") ? (
+                              <div className="text-right shrink-0">
+                                <p className="text-[11px] text-muted-foreground">{String(btn.attributes?.lastEvent || "")}</p>
+                                {btn.attributes?.battery != null && (
+                                  <p className="text-[10px] text-muted-foreground/60">{String(btn.attributes.battery)}%</p>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className={cn("text-xs font-medium", isOn ? "text-indigo-400" : "text-muted-foreground")}>
+                                  {!isAvailable ? "Offline" : isOn ? "ON" : "OFF"}
+                                </span>
+                                <button onClick={() => toggle(btn.id, !isOn)} disabled={!isAvailable}
+                                  className={cn(
+                                    "relative w-14 h-8 rounded-lg transition-all border flex items-center justify-center",
+                                    isOn ? "bg-indigo-400/20 border-indigo-400/30 text-indigo-400" : "bg-muted border-border text-muted-foreground",
+                                    !isAvailable && "cursor-not-allowed opacity-40"
+                                  )}>
+                                  <span className="text-[10px] font-bold tracking-wider">{isOn ? "ON" : "OFF"}</span>
+                                </button>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-6 text-center border border-dashed border-border/50 rounded-xl bg-secondary/10">
+                      <span className="text-sm text-muted-foreground">Nenhum botão de Portão encontrado.</span>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>

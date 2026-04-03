@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { getDevices as getTuyaDevices } from "@/services/tuya/client";
 import { mapTuyaDevice } from "@/services/tuya/mapper";
-import { getHueLights, getHueGroups } from "@/services/hue/client";
-import { mapHueLightsWithRooms } from "@/services/hue/mapper";
+import { getHueLights, getHueGroups, getHueSensors } from "@/services/hue/client";
+import { mapHueLightsWithRooms, mapHueSensor } from "@/services/hue/mapper";
 import { getHubSpaceDevices } from "@/services/hubspace/client";
 import { mapHubSpaceDevice } from "@/services/hubspace/mapper";
 import { getRingDevices } from "@/services/ring/client";
@@ -25,9 +25,10 @@ export async function GET() {
 
     // Hue
     (process.env.HUE_BRIDGE_IP || process.env.HUE_BRIDGE_URL) && process.env.HUE_API_KEY
-      ? Promise.all([getHueLights(), getHueGroups()]).then(([lights, groups]) =>
-          mapHueLightsWithRooms(lights, groups)
-        )
+      ? Promise.all([getHueLights(), getHueGroups(), getHueSensors()]).then(([lights, groups, sensors]) => [
+          ...mapHueLightsWithRooms(lights, groups),
+          ...sensors.map(mapHueSensor),
+        ])
       : Promise.resolve([]),
 
     // HubSpace
