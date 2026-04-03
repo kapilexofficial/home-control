@@ -24,7 +24,7 @@ export async function GET() {
       : Promise.resolve([]),
 
     // Hue
-    process.env.HUE_BRIDGE_IP && process.env.HUE_API_KEY
+    (process.env.HUE_BRIDGE_IP || process.env.HUE_BRIDGE_URL) && process.env.HUE_API_KEY
       ? Promise.all([getHueLights(), getHueGroups()]).then(([lights, groups]) =>
           mapHueLightsWithRooms(lights, groups)
         )
