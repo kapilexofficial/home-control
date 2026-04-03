@@ -69,8 +69,13 @@ export default function DashboardPage() {
   const cameras = onlineDevices.filter((d) => d.type === DeviceType.CAMERA);
   const sensors = onlineDevices.filter((d) => d.type === DeviceType.SENSOR);
   const lights = onlineDevices.filter((d) => d.type === DeviceType.LIGHT);
+  const buttons = onlineDevices.filter((d) =>
+    (d.type === DeviceType.SWITCH || d.type === DeviceType.LOCK || d.type === DeviceType.COVER) &&
+    (d.name.toLowerCase().includes("portão") || d.name.toLowerCase().includes("portao") || d.name.toLowerCase().includes("garagem"))
+  );
   const switches = onlineDevices.filter((d) =>
-    d.type === DeviceType.SWITCH || d.type === DeviceType.LOCK || d.type === DeviceType.FAN
+    (d.type === DeviceType.SWITCH || d.type === DeviceType.LOCK || d.type === DeviceType.FAN) &&
+    !buttons.some(b => b.id === d.id)
   );
   const lightsOn = lights.filter((d) => d.state === "on").length;
 
@@ -241,62 +246,122 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* INTERRUPTORES */}
-            {switches.length > 0 && (
-              <div className="card-dark rounded-2xl p-5">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                  <span className="text-base font-semibold">Interruptores</span>
-                  <span className="text-[11px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">{switches.length}</span>
-                </div>
-                <div className="space-y-2">
-                  {switches.map((sw) => {
-                    const isOn = sw.state === "on";
-                    const isAvailable = sw.online && sw.state !== "unavailable";
-                    const roomConfig = ROOM_CONFIG.find((r) => r.id === sw.roomId);
-                    const colors = ROOM_COLORS[sw.roomId || ""] || DEFAULT_ROOM_COLOR;
-                    return (
-                      <div key={sw.id} className={cn(
-                        "rounded-xl p-3.5 transition-all duration-300 border border-transparent flex items-center gap-3",
-                        isOn ? "bg-emerald-400/[0.04] border-emerald-400/10" : "bg-secondary/30",
-                        !isAvailable && "opacity-35"
-                      )}>
-                        {/* Switch illustration */}
-                        <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", isOn ? "bg-emerald-400/15" : "bg-secondary")}>
-                          <svg width="18" height="26" viewBox="0 0 18 26" className={isOn ? "opacity-100" : "opacity-30"}>
-                            <rect x="1" y="1" width="16" height="24" rx="4" fill="none" stroke={isOn ? "#34d399" : "#444"} strokeWidth="1.5" />
-                            <rect x="5" y={isOn ? 3 : 13} width="8" height="10" rx="2" fill={isOn ? "#34d399" : "#444"} opacity={isOn ? 0.8 : 0.4} />
-                            {isOn && <circle cx="9" cy="8" r="1.5" fill="#fff" opacity="0.6" />}
-                          </svg>
-                        </div>
-
-                        {/* Name + room */}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{sw.name}</p>
-                          <p className={cn("text-[11px]", colors.accent)}>{roomConfig?.name || ""}</p>
-                        </div>
-
-                        {/* Status */}
-                        <span className={cn("text-xs font-medium", isOn ? "text-emerald-400" : "text-muted-foreground")}>
-                          {!isAvailable ? "Offline" : isOn ? "ON" : "OFF"}
-                        </span>
-
-                        {/* Toggle switch (interruptor style) */}
-                        <button onClick={() => toggle(sw.id, !isOn)} disabled={!isAvailable}
-                          className={cn(
-                            "relative w-14 h-8 rounded-lg shrink-0 transition-all border",
-                            isOn ? "bg-emerald-400/20 border-emerald-400/30" : "bg-muted border-border",
-                            !isAvailable && "cursor-not-allowed opacity-40"
+            {/* RIGHT COLUMN: INTERRUPTORES & BOTOES */}
+            {(switches.length > 0 || buttons.length > 0) && (
+              <div className="flex flex-col gap-5">
+                {/* INTERRUPTORES */}
+                {switches.length > 0 && (
+                  <div className="card-dark rounded-2xl p-5 flex-1 self-start w-full">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                      <span className="text-base font-semibold">Interruptores</span>
+                      <span className="text-[11px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">{switches.length}</span>
+                    </div>
+                    <div className="space-y-2">
+                      {switches.map((sw) => {
+                        const isOn = sw.state === "on";
+                        const isAvailable = sw.online && sw.state !== "unavailable";
+                        const roomConfig = ROOM_CONFIG.find((r) => r.id === sw.roomId);
+                        const colors = ROOM_COLORS[sw.roomId || ""] || DEFAULT_ROOM_COLOR;
+                        return (
+                          <div key={sw.id} className={cn(
+                            "rounded-xl p-3.5 transition-all duration-300 border border-transparent flex items-center gap-3",
+                            isOn ? "bg-emerald-400/[0.04] border-emerald-400/10" : "bg-secondary/30",
+                            !isAvailable && "opacity-35"
                           )}>
-                          <span className={cn(
-                            "absolute top-[3px] w-[24px] h-[26px] rounded-md shadow-md transition-all",
-                            isOn ? "left-[26px] bg-emerald-400" : "left-[3px] bg-muted-foreground/60"
-                          )} />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
+                            {/* Switch illustration */}
+                            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", isOn ? "bg-emerald-400/15" : "bg-secondary")}>
+                              <svg width="18" height="26" viewBox="0 0 18 26" className={isOn ? "opacity-100" : "opacity-30"}>
+                                <rect x="1" y="1" width="16" height="24" rx="4" fill="none" stroke={isOn ? "#34d399" : "#444"} strokeWidth="1.5" />
+                                <rect x="5" y={isOn ? 3 : 13} width="8" height="10" rx="2" fill={isOn ? "#34d399" : "#444"} opacity={isOn ? 0.8 : 0.4} />
+                                {isOn && <circle cx="9" cy="8" r="1.5" fill="#fff" opacity="0.6" />}
+                              </svg>
+                            </div>
+
+                            {/* Name + room */}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{sw.name}</p>
+                              <p className={cn("text-[11px]", colors.accent)}>{roomConfig?.name || ""}</p>
+                            </div>
+
+                            {/* Status */}
+                            <span className={cn("text-xs font-medium", isOn ? "text-emerald-400" : "text-muted-foreground")}>
+                              {!isAvailable ? "Offline" : isOn ? "ON" : "OFF"}
+                            </span>
+
+                            {/* Toggle switch (interruptor style) */}
+                            <button onClick={() => toggle(sw.id, !isOn)} disabled={!isAvailable}
+                              className={cn(
+                                "relative w-14 h-8 rounded-lg shrink-0 transition-all border",
+                                isOn ? "bg-emerald-400/20 border-emerald-400/30" : "bg-muted border-border",
+                                !isAvailable && "cursor-not-allowed opacity-40"
+                              )}>
+                              <span className={cn(
+                                "absolute top-[3px] w-[24px] h-[26px] rounded-md shadow-md transition-all",
+                                isOn ? "left-[26px] bg-emerald-400" : "left-[3px] bg-muted-foreground/60"
+                              )} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* BOTOES */}
+                {buttons.length > 0 && (
+                  <div className="card-dark rounded-2xl p-5 flex-1 self-start w-full">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="w-2.5 h-2.5 rounded-full bg-indigo-400" />
+                      <span className="text-base font-semibold">Botões</span>
+                      <span className="text-[11px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">{buttons.length}</span>
+                    </div>
+                    <div className="space-y-2">
+                      {buttons.map((btn) => {
+                        const isOn = btn.state === "on";
+                        const isAvailable = btn.online && btn.state !== "unavailable";
+                        const roomConfig = ROOM_CONFIG.find((r) => r.id === btn.roomId);
+                        const colors = ROOM_COLORS[btn.roomId || ""] || DEFAULT_ROOM_COLOR;
+                        return (
+                          <div key={btn.id} className={cn(
+                            "rounded-xl p-3.5 transition-all duration-300 border border-transparent flex items-center gap-3",
+                            isOn ? "bg-indigo-400/[0.04] border-indigo-400/10" : "bg-secondary/30",
+                            !isAvailable && "opacity-35"
+                          )}>
+                            {/* Button illustration */}
+                            <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", isOn ? "bg-indigo-400/15" : "bg-secondary")}>
+                              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={isOn ? "#818cf8" : "#444"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={isOn ? "opacity-100" : "opacity-40"}>
+                                <circle cx="12" cy="12" r="10" />
+                                <circle cx="12" cy="12" r="4" fill={isOn ? "#818cf8" : "none"} />
+                              </svg>
+                            </div>
+
+                            {/* Name + room */}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{btn.name}</p>
+                              <p className={cn("text-[11px]", colors.accent)}>{roomConfig?.name || ""}</p>
+                            </div>
+
+                            {/* Status */}
+                            <span className={cn("text-xs font-medium", isOn ? "text-indigo-400" : "text-muted-foreground")}>
+                              {!isAvailable ? "Offline" : isOn ? "ON" : "OFF"}
+                            </span>
+
+                            {/* Push Button Style */}
+                            <button onClick={() => toggle(btn.id, !isOn)} disabled={!isAvailable}
+                              className={cn(
+                                "relative w-14 h-8 rounded-lg shrink-0 transition-all border flex items-center justify-center",
+                                isOn ? "bg-indigo-400/20 border-indigo-400/30 text-indigo-400" : "bg-muted border-border text-muted-foreground",
+                                !isAvailable && "cursor-not-allowed opacity-40"
+                              )}>
+                              <span className="text-[10px] font-bold tracking-wider">{isOn ? "ON" : "OFF"}</span>
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

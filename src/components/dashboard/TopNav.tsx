@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { Home, LogOut } from "lucide-react";
+import { Home, LogOut, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 const ROOM_TAB_COLORS: Record<string, { active: string; ring: string }> = {
@@ -76,8 +77,15 @@ export function TopNav({ rooms, activeRoom, onRoomChange }: TopNavProps) {
         </select>
       </div>
 
-      {/* Profile + Logout */}
-      <div className="flex items-center gap-2">
+      {/* Profile + Admin + Logout */}
+      <div className="flex items-center gap-1.5">
+        <Link
+          href="/admin"
+          className="w-9 h-9 rounded-xl bg-secondary/50 flex items-center justify-center hover:bg-primary/20 hover:text-primary transition-all"
+          title="Admin"
+        >
+          <Shield className="w-4 h-4" />
+        </Link>
         <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-secondary to-muted flex items-center justify-center text-sm font-semibold">
           L
         </div>
