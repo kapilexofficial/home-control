@@ -1,21 +1,57 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112.64" fill="#0a0a0a"/>
-  <g transform="translate(256, 256) scale(5.12)">
-    <!-- House body -->
-    <rect x="-28" y="-8" width="56" height="40" rx="4" fill="#1a1a2e" stroke="#818cf8" stroke-width="2"/>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1e1b4b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#a5b4fc"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <linearGradient id="win" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.4"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background - full bleed -->
+  <rect width="512" height="512" fill="url(#bg)"/>
+
+  <!-- House -->
+  <g>
+    <!-- Body -->
+    <rect x="120" y="252" width="272" height="176" rx="8" fill="#1e1b4b" stroke="url(#glow)" stroke-width="3.5"/>
+
     <!-- Roof -->
-    <path d="M-35 -8 L0 -35 L35 -8" fill="none" stroke="#818cf8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-    <!-- Door -->
-    <rect x="-8" y="8" width="16" height="24" rx="2" fill="#818cf8" opacity="0.3"/>
-    <!-- Door handle -->
-    <circle cx="5" cy="20" r="1.5" fill="#818cf8"/>
-    <!-- Window left -->
-    <rect x="-24" y="2" width="10" height="10" rx="1.5" fill="#818cf8" opacity="0.2" stroke="#818cf8" stroke-width="1"/>
-    <!-- Window right -->
-    <rect x="14" y="2" width="10" height="10" rx="1.5" fill="#818cf8" opacity="0.2" stroke="#818cf8" stroke-width="1"/>
+    <path d="M96 260 L256 130 L416 260" fill="#1e1b4b" stroke="url(#glow)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M120 252 L256 148 L392 252" fill="#131136"/>
+
     <!-- Chimney -->
-    <rect x="15" y="-30" width="8" height="15" rx="1" fill="#1a1a2e" stroke="#818cf8" stroke-width="1.5"/>
+    <rect x="340" y="162" width="28" height="60" rx="4" fill="#1e1b4b" stroke="url(#glow)" stroke-width="3"/>
+
+    <!-- Door -->
+    <rect x="220" y="304" width="72" height="124" rx="8" fill="#818cf8" opacity="0.15" stroke="#818cf8" stroke-width="2.5"/>
+    <circle cx="278" cy="370" r="5" fill="#818cf8" opacity="0.8"/>
+
+    <!-- Window left -->
+    <rect x="140" y="284" width="60" height="50" rx="6" fill="url(#win)"/>
+    <line x1="170" y1="284" x2="170" y2="334" stroke="#1e1b4b" stroke-width="2.5" opacity="0.4"/>
+    <line x1="140" y1="309" x2="200" y2="309" stroke="#1e1b4b" stroke-width="2.5" opacity="0.4"/>
+
+    <!-- Window right -->
+    <rect x="312" y="284" width="60" height="50" rx="6" fill="url(#win)"/>
+    <line x1="342" y1="284" x2="342" y2="334" stroke="#1e1b4b" stroke-width="2.5" opacity="0.4"/>
+    <line x1="312" y1="309" x2="372" y2="309" stroke="#1e1b4b" stroke-width="2.5" opacity="0.4"/>
   </g>
-  <!-- App name -->
-  <text x="256" y="471.04" text-anchor="middle" fill="#818cf8" font-family="system-ui, -apple-system, sans-serif" font-size="51.2" font-weight="600" opacity="0.8">HC</text>
+
+  <!-- Wi-Fi arcs -->
+  <g transform="translate(256, 100)" stroke="#818cf8" fill="none" stroke-width="3.5" stroke-linecap="round">
+    <path d="M-32 0 a45 45 0 0 1 64 0" opacity="0.25"/>
+    <path d="M-22 10 a30 30 0 0 1 44 0" opacity="0.5"/>
+    <path d="M-12 20 a16 16 0 0 1 24 0" opacity="0.8"/>
+    <circle cx="0" cy="28" r="4.5" fill="#818cf8"/>
+  </g>
+
+  <!-- Text -->
+  <text x="256" y="468" text-anchor="middle" fill="#818cf8" font-family="system-ui,-apple-system,sans-serif" font-size="28" font-weight="800" letter-spacing="8" opacity="0.4">HOME CONTROL</text>
 </svg>
