@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useDevices } from "@/hooks/useDevices";
 import { useCommand } from "@/hooks/useCommand";
+import { useProfile } from "@/hooks/useProfile";
 import { TopNav } from "@/components/dashboard/TopNav";
 import { CameraFeed } from "@/components/devices/CameraFeed";
 import { DeviceType } from "@/types/device";
@@ -45,6 +46,7 @@ export default function DashboardPage() {
   const [activeRoom, setActiveRoom] = useState("all");
   const { data: devices, isLoading } = useDevices();
   const { toggle, setBrightness, sendCommand } = useCommand();
+  const { data: profile } = useProfile();
   const [hueBtnSceneIndex, setHueBtnSceneIndex] = useState(-1);
   const now = useCurrentTime();
 
@@ -64,7 +66,11 @@ export default function DashboardPage() {
     return <div className="flex items-center justify-center min-h-screen"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>;
   }
 
-  const allDevices = devices || [];
+  const allDevicesRaw = devices || [];
+  // Filter by user permissions (null = all rooms allowed)
+  const allDevices = profile?.allowed_rooms
+    ? allDevicesRaw.filter((d) => !d.roomId || profile.allowed_rooms!.includes(d.roomId))
+    : allDevicesRaw;
   const visibleDevices = activeRoom === "all" ? allDevices : allDevices.filter((d) => d.roomId === activeRoom);
   const onlineDevices = visibleDevices.filter((d) => d.online);
   const cameras = onlineDevices.filter((d) => d.type === DeviceType.CAMERA);
@@ -100,7 +106,7 @@ export default function DashboardPage() {
               <div className="card-dark rounded-2xl p-5 flex items-center justify-between gap-4">
                 <div>
                   <h1 className="text-2xl font-semibold">
-                    {greeting}, <span className="gradient-text">Lucas</span>
+                    {greeting}, <span className="gradient-text">{profile?.name?.split(" ")[0] || "Usuário"}</span>
                   </h1>
                   <p className="text-sm text-muted-foreground mt-1">
                     {now.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}

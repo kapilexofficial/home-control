@@ -27,14 +27,14 @@ export async function GET() {
   }
 }
 
-// POST: Create new user
+// POST: Create new user with profile
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json();
+    const { email, password, name, role, allowed_rooms, can_control } = await request.json();
 
-    if (!email || !password) {
+    if (!email || !password || !name) {
       return NextResponse.json(
-        { error: "Email e senha são obrigatórios" },
+        { error: "Nome, email e senha são obrigatórios" },
         { status: 400 }
       );
     }
@@ -43,9 +43,19 @@ export async function POST(request: NextRequest) {
       email,
       password,
       email_confirm: true,
+      user_metadata: { name },
     });
 
     if (error) throw error;
+
+    // Create profile
+    await supabaseAdmin.from("profiles").insert({
+      id: data.user.id,
+      name,
+      role: role || "user",
+      allowed_rooms: allowed_rooms || null,
+      can_control: can_control ?? true,
+    });
 
     return NextResponse.json({
       user: {
