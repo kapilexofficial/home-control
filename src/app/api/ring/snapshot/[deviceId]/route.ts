@@ -1,26 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { RingApi } from "ring-client-api";
-
-let ringApiInstance: RingApi | null = null;
-
-function getRingApi(): RingApi {
-  if (ringApiInstance) return ringApiInstance;
-
-  const refreshToken = process.env.RING_REFRESH_TOKEN;
-  if (!refreshToken) throw new Error("RING_REFRESH_TOKEN not set");
-
-  ringApiInstance = new RingApi({
-    refreshToken,
-    cameraStatusPollingSeconds: 30,
-  });
-
-  ringApiInstance.onRefreshTokenUpdated.subscribe(() => {
-    console.log("[Ring] Refresh token updated");
-  });
-
-  return ringApiInstance;
-}
+import { getRingApi } from "@/services/ring/client";
 
 export async function GET(
   _request: NextRequest,
@@ -30,7 +10,7 @@ export async function GET(
   const ringId = deviceId.replace("ring-", "");
 
   try {
-    const api = getRingApi();
+    const api = await getRingApi();
     const cameras = await api.getCameras();
     const camera = cameras.find((c) => String(c.id) === ringId);
 

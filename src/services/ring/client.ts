@@ -1,35 +1,73 @@
 import { RingApi } from "ring-client-api";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 import type { Device } from "@/types/device";
 import { DeviceType } from "@/types/device";
 
-let ringApiInstance: RingApi | null = null;
+let ringApiPromise: Promise<RingApi> | null = null;
 
-function getRingApi(): RingApi {
-  if (ringApiInstance) return ringApiInstance;
+export async function getRingApi(): Promise<RingApi> {
+  if (ringApiPromise) return ringApiPromise;
+  ringApiPromise = buildRingApi().catch((err) => {
+    ringApiPromise = null;
+    throw err;
+  });
+  return ringApiPromise;
+}
 
-  const refreshToken = process.env.RING_REFRESH_TOKEN;
-  if (!refreshToken) throw new Error("RING_REFRESH_TOKEN not set");
+async function buildRingApi(): Promise<RingApi> {
+  const refreshToken = await loadRefreshToken();
+  if (!refreshToken) {
+    throw new Error(
+      "Ring refresh token not found in Supabase or RING_REFRESH_TOKEN env"
+    );
+  }
 
-  ringApiInstance = new RingApi({
+  const api = new RingApi({
     refreshToken,
     cameraStatusPollingSeconds: 30,
   });
 
-  // Update refresh token when it changes
-  ringApiInstance.onRefreshTokenUpdated.subscribe(({ newRefreshToken }) => {
-    // In production, you'd save this to a persistent store
-    // For now it stays in memory until server restart
-    console.log("[Ring] Refresh token updated");
+  api.onRefreshTokenUpdated.subscribe(({ newRefreshToken }) => {
+    if (!newRefreshToken) return;
+    persistRefreshToken(newRefreshToken).catch((err) => {
+      console.error("[Ring] Failed to persist rotated token:", err);
+    });
   });
 
-  return ringApiInstance;
+  return api;
+}
+
+async function loadRefreshToken(): Promise<string | null> {
+  const { data, error } = await supabaseAdmin
+    .from("integration_tokens")
+    .select("refresh_token")
+    .eq("platform", "ring")
+    .maybeSingle();
+  if (error) {
+    console.error("[Ring] Failed to load token from Supabase:", error);
+  }
+  if (data?.refresh_token) return data.refresh_token;
+  return process.env.RING_REFRESH_TOKEN ?? null;
+}
+
+async function persistRefreshToken(newToken: string): Promise<void> {
+  const { error } = await supabaseAdmin.from("integration_tokens").upsert(
+    {
+      platform: "ring",
+      refresh_token: newToken,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "platform" }
+  );
+  if (error) throw error;
+  console.log("[Ring] Refresh token rotated and persisted to Supabase");
 }
 
 export async function getRingDevices(): Promise<Device[]> {
-  const api = getRingApi();
   const devices: Device[] = [];
 
   try {
+    const api = await getRingApi();
     const cameras = await api.getCameras();
 
     for (const cam of cameras) {

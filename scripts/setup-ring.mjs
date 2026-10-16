@@ -1,9 +1,36 @@
 import { RingApi } from "ring-client-api";
 import * as readline from "readline";
 import * as fs from "fs";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
 
-const EMAIL = "luquinhas@icloud.com";
-const PASSWORD = "Luc@s123!";
+const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
+const ENV_PATH = resolve(SCRIPT_DIR, "..", ".env.local");
+
+function loadEnvLocal() {
+  let raw;
+  try {
+    raw = fs.readFileSync(ENV_PATH, "utf8");
+  } catch {
+    return;
+  }
+  for (const line of raw.split("\n")) {
+    const m = line.match(/^([A-Z0-9_]+)=(.*)$/);
+    if (m && process.env[m[1]] === undefined) process.env[m[1]] = m[2];
+  }
+}
+
+loadEnvLocal();
+
+const EMAIL = process.env.RING_EMAIL;
+const PASSWORD = process.env.RING_PASSWORD;
+
+if (!EMAIL || !PASSWORD) {
+  console.error(
+    "❌ RING_EMAIL e/ou RING_PASSWORD não estão definidos no .env.local"
+  );
+  process.exit(1);
+}
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -14,6 +41,20 @@ function ask(question) {
   return new Promise((resolve) => rl.question(question, resolve));
 }
 
+function saveToken(newRefreshToken) {
+  let envContent = fs.readFileSync(ENV_PATH, "utf8");
+  if (envContent.includes("RING_REFRESH_TOKEN=")) {
+    envContent = envContent.replace(
+      /RING_REFRESH_TOKEN=.*/,
+      `RING_REFRESH_TOKEN=${newRefreshToken}`
+    );
+  } else {
+    envContent += `\nRING_REFRESH_TOKEN=${newRefreshToken}\n`;
+  }
+  fs.writeFileSync(ENV_PATH, envContent);
+  console.log("✅ Token salvo no .env.local");
+}
+
 async function main() {
   console.log("=== Ring Setup ===");
   console.log("Isso vai enviar um código 2FA para seu email/telefone.\n");
@@ -22,29 +63,14 @@ async function main() {
     const ringApi = new RingApi({
       email: EMAIL,
       password: PASSWORD,
-      // This will trigger 2FA
     });
 
     ringApi.onRefreshTokenUpdated.subscribe(({ newRefreshToken }) => {
       console.log("\n✅ Refresh token obtido!");
       console.log(`Token: ${newRefreshToken.substring(0, 30)}...`);
-
-      // Save to .env.local
-      const envPath = ".env.local";
-      let envContent = fs.readFileSync(envPath, "utf-8");
-      if (envContent.includes("RING_REFRESH_TOKEN=")) {
-        envContent = envContent.replace(
-          /RING_REFRESH_TOKEN=.*/,
-          `RING_REFRESH_TOKEN=${newRefreshToken}`
-        );
-      } else {
-        envContent += `\nRING_REFRESH_TOKEN=${newRefreshToken}\n`;
-      }
-      fs.writeFileSync(envPath, envContent);
-      console.log("✅ Token salvo no .env.local");
+      saveToken(newRefreshToken);
     });
 
-    // Get devices to trigger auth
     const devices = await ringApi.getCameras();
     console.log(`\n📹 ${devices.length} câmera(s) encontrada(s):`);
     for (const cam of devices) {
@@ -68,19 +94,7 @@ async function main() {
 
         ringApi.onRefreshTokenUpdated.subscribe(({ newRefreshToken }) => {
           console.log("\n✅ Refresh token obtido!");
-
-          const envPath = ".env.local";
-          let envContent = fs.readFileSync(envPath, "utf-8");
-          if (envContent.includes("RING_REFRESH_TOKEN=")) {
-            envContent = envContent.replace(
-              /RING_REFRESH_TOKEN=.*/,
-              `RING_REFRESH_TOKEN=${newRefreshToken}`
-            );
-          } else {
-            envContent += `\nRING_REFRESH_TOKEN=${newRefreshToken}\n`;
-          }
-          fs.writeFileSync(envPath, envContent);
-          console.log("✅ Token salvo no .env.local");
+          saveToken(newRefreshToken);
         });
 
         const devices = await ringApi.getCameras();
