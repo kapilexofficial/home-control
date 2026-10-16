@@ -1,7 +1,9 @@
 // Registry of new-generation Kasa switches: which exist (from the Kasa cloud,
-// which knows their MACs) and where they are on the LAN (ARP, with a ping
-// sweep fallback because DHCP moves them around). State and control go over
-// KLAP directly to each device.
+// which knows their MACs) and where they are on the LAN (ARP first, then
+// TP-Link's UDP discovery broadcast, then a ping sweep as a last resort,
+// because DHCP moves them around). State and control go over KLAP directly
+// to each device.
+import dgram from "node:dgram";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { KlapDevice, decodeNickname } from "./kasa-klap.mjs";
@@ -21,6 +23,14 @@ const SUBNETS = (process.env.KASA_SUBNETS || "192.168.4,192.168.5,192.168.6,192.
 const CLOUD_TTL = 10 * 60 * 1000;
 const STATE_TTL = 3000;
 const SWEEP_MIN_INTERVAL = 60 * 1000;
+
+// TP-Link new-generation discovery (same probe python-kasa sends). The HS200
+// ignores ICMP, so it never shows up in ARP after a ping sweep, but it does
+// answer this broadcast with its MAC, IP and encryption scheme.
+const DISCOVERY_PORT = 20002;
+const DISCOVERY_PROBE = Buffer.from("020000010000000000000000463cb5d3", "hex");
+const DISCOVERY_WAIT = 2500;
+const DISCOVERY_MIN_INTERVAL = 10 * 1000;
 
 const log = (...args) => console.log("[Kasa]", ...args);
 
@@ -125,15 +135,64 @@ function sweepSubnets() {
   return sweepPromise;
 }
 
+let discovery = { at: 0, promise: null, result: new Map() };
+
+// Broadcast the discovery probe and collect MAC -> IP from whoever answers.
+function discoverByBroadcast() {
+  if (discovery.promise) return discovery.promise;
+  if (Date.now() - discovery.at < DISCOVERY_MIN_INTERVAL) return Promise.resolve(discovery.result);
+
+  const promise = new Promise((resolve) => {
+    const found = new Map();
+    const sock = dgram.createSocket("udp4");
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      try { sock.close(); } catch { /* already closed */ }
+      resolve(found);
+    };
+    sock.on("error", (err) => {
+      log("discovery socket error:", err.message);
+      finish();
+    });
+    sock.on("message", (msg, rinfo) => {
+      try {
+        // 16-byte header followed by {"error_code":0,"result":{...}}
+        const result = JSON.parse(msg.subarray(16).toString("utf8")).result;
+        const mac = normMac(result?.mac);
+        if (mac) found.set(mac, rinfo.address);
+      } catch {
+        // not a discovery reply
+      }
+    });
+    sock.bind(0, () => {
+      sock.setBroadcast(true);
+      const targets = ["255.255.255.255", ...SUBNETS.map((s) => `${s}.255`)];
+      for (const addr of targets) {
+        for (let i = 0; i < 2; i++) sock.send(DISCOVERY_PROBE, DISCOVERY_PORT, addr);
+      }
+    });
+    setTimeout(finish, DISCOVERY_WAIT);
+  }).then((found) => {
+    discovery = { at: Date.now(), promise: null, result: found };
+    if (found.size) log(`discovery: ${found.size} new-gen device(s) answered on UDP ${DISCOVERY_PORT}`);
+    return found;
+  });
+
+  discovery.promise = promise;
+  return promise;
+}
+
 const ipByMac = new Map();
 
 async function resolveIp(mac, allowSweep) {
-  let arp = await readArpTable();
-  if (!arp.has(mac) && allowSweep) {
+  let ip = (await readArpTable()).get(mac) || null;
+  if (!ip) ip = (await discoverByBroadcast()).get(mac) || null;
+  if (!ip && allowSweep) {
     await sweepSubnets();
-    arp = await readArpTable();
+    ip = (await readArpTable()).get(mac) || null;
   }
-  const ip = arp.get(mac) || null;
   if (ip) ipByMac.set(mac, ip);
   return ip;
 }
