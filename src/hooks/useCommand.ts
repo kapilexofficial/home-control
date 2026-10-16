@@ -1,8 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/services/api";
-import type { Device } from "@/types/device";
+import { api, type DevicesResponse } from "@/services/api";
 
 // Track when the last command was sent to suppress polling refetches
 let lastCommandTime = 0;
@@ -33,12 +32,12 @@ export function useCommand() {
       await queryClient.cancelQueries({ queryKey: ["devices"] });
 
       // Snapshot previous state
-      const previousDevices = queryClient.getQueryData<Device[]>(["devices"]);
+      const previousDevices = queryClient.getQueryData<DevicesResponse>(["devices"]);
 
       // Optimistically update
       if (previousDevices) {
-        queryClient.setQueryData<Device[]>(["devices"], (old) =>
-          old?.map((device) => {
+        queryClient.setQueryData<DevicesResponse>(["devices"], (old) =>
+          old && { ...old, devices: old.devices.map((device) => {
             if (device.id !== deviceId) return device;
 
             const updated = { ...device, attributes: { ...device.attributes } };
@@ -61,7 +60,7 @@ export function useCommand() {
             }
 
             return updated;
-          })
+          }) }
         );
       }
 

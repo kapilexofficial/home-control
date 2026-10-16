@@ -1,22 +1,21 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/services/api";
+import { api, type DevicesResponse } from "@/services/api";
 import { POLLING_INTERVAL } from "@/lib/constants";
 import { isInCommandCooldown } from "./useCommand";
 import type { Device } from "@/types/device";
 import { DeviceType } from "@/types/device";
 
 export function useDevices() {
-  return useQuery({
+  const query = useQuery<DevicesResponse, Error>({
     queryKey: ["devices"],
     queryFn: async () => {
       // Skip fetch during command cooldown to prevent state revert
       if (isInCommandCooldown()) {
         throw new Error("cooldown");
       }
-      const data = await api.devices.list();
-      return data.devices;
+      return api.devices.list();
     },
     refetchInterval: POLLING_INTERVAL,
     retry: (failureCount, error) => {
@@ -25,6 +24,19 @@ export function useDevices() {
       return failureCount < 3;
     },
   });
+
+  // "cooldown" is a deliberate skip, not a real failure
+  const fetchError =
+    query.error && query.error.message !== "cooldown" ? query.error.message : null;
+
+  return {
+    ...query,
+    data: query.data?.devices,
+    /** Platforms that failed in the last response, e.g. "Tuya: IoT Core expired". */
+    platformErrors: query.data?.errors ?? [],
+    /** Set when the whole /api/devices request failed (network, 500...). */
+    fetchError,
+  };
 }
 
 export function useDevicesByRoom(devices: Device[] | undefined) {

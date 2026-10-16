@@ -7,6 +7,7 @@ import { useCommand } from "@/hooks/useCommand";
 import { useProfile } from "@/hooks/useProfile";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { TopNav } from "@/components/dashboard/TopNav";
+import { PlatformErrorBanner } from "@/components/shared/PlatformErrorBanner";
 import { CameraFeed } from "@/components/devices/CameraFeed";
 import { DeviceType } from "@/types/device";
 import type { Device } from "@/types/device";
@@ -127,6 +128,8 @@ export default function DashboardPage() {
         <TopNav rooms={ROOMS} activeRoom={activeRoom} onRoomChange={setActiveRoom} />
 
         <div className="space-y-5">
+          <PlatformErrorBanner />
+
           {/* ── TOP: Greeting/Weather/Time + Sensors + Activity (all aligned) ── */}
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-3">
             {/* Left column: greeting bar + sensor cards */}
@@ -456,13 +459,13 @@ export default function DashboardPage() {
                   <span className="text-[11px] text-muted-foreground bg-secondary px-2 py-0.5 rounded-full">{cameras.length}</span>
                 </div>
                 {/* Top row */}
-                <div className="grid grid-cols-3 gap-3 mb-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-3">
                   {topCams.map((cam) => (
                     <div key={cam.id} className="card-dark rounded-2xl overflow-hidden"><CameraFeed device={cam} /></div>
                   ))}
                 </div>
                 {/* Bottom row */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                   {bottomCams.map((cam) => (
                     <div key={cam.id} className="card-dark rounded-2xl overflow-hidden"><CameraFeed device={cam} /></div>
                   ))}

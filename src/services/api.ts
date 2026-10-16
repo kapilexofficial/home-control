@@ -19,9 +19,15 @@ async function fetchAPI<T>(path: string, options?: RequestInit): Promise<T> {
   return response.json();
 }
 
+export interface DevicesResponse {
+  devices: Device[];
+  /** Per-platform failures, formatted as "Platform: message". */
+  errors?: string[];
+}
+
 export const api = {
   devices: {
-    list: () => fetchAPI<{ devices: Device[] }>("/devices"),
+    list: () => fetchAPI<DevicesResponse>("/devices"),
 
     getStatus: (deviceId: string) =>
       fetchAPI<{ device: Device }>(`/devices/${deviceId}`),

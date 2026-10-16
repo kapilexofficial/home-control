@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useDevices } from "@/hooks/useDevices";
+import { PlatformErrorBanner } from "@/components/shared/PlatformErrorBanner";
 import { RoomCard } from "@/components/dashboard/RoomCard";
 import { ROOMS } from "@/config/rooms";
 import { ArrowLeft, Loader2 } from "lucide-react";
@@ -35,6 +36,8 @@ export default function RoomsPage() {
           </p>
         </div>
       </div>
+
+      <PlatformErrorBanner className="mb-6" />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {ROOMS.map((room) => (

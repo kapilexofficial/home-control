@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useDevices } from "@/hooks/useDevices";
+import { PlatformErrorBanner } from "@/components/shared/PlatformErrorBanner";
 import { useCommand } from "@/hooks/useCommand";
 import { DeviceGrid } from "@/components/devices/DeviceGrid";
 import { EmptyState } from "@/components/shared/EmptyState";
@@ -53,6 +54,8 @@ export default function DevicesPage() {
           </p>
         </div>
       </div>
+
+      <PlatformErrorBanner className="mb-6" />
 
       {/* Type Filter Tabs */}
       <div className="flex gap-2 overflow-x-auto pb-4 mb-4">
