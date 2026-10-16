@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import type { Device } from "@/types/device";
 import { DeviceType } from "@/types/device";
 
@@ -10,13 +11,18 @@ const CLOUD_URL = "https://wap.tplinkcloud.com";
 const KASA_PROXY_URL = (process.env.KASA_PROXY_URL || "http://localhost:3002").replace(/\/$/, "");
 const KASA_PROXY_SECRET = process.env.KASA_PROXY_SECRET || "";
 
+// The legacy cloud keeps one session per terminalUUID: logging in again with the
+// same UUID revokes the previous token ("Account login in other places", -20675).
+// Production, preview and local dev used to share one fixed UUID and kept kicking
+// each other out, so every process now gets its own.
+const TERMINAL_UUID = `home-control-${process.env.VERCEL_ENV || "local"}-${randomUUID()}`;
+
+// Cloud error codes that mean "this token is no longer valid, log in again"
+const TOKEN_REVOKED_CODES = new Set([-20675, -20651]);
+
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
-async function getToken(): Promise<string> {
-  if (cachedToken && Date.now() < cachedToken.expiresAt) {
-    return cachedToken.token;
-  }
-
+async function login(): Promise<string> {
   const res = await fetch(CLOUD_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -26,7 +32,7 @@ async function getToken(): Promise<string> {
         appType: "Kasa_Android",
         cloudUserName: KASA_EMAIL,
         cloudPassword: KASA_PASSWORD,
-        terminalUUID: "home-control-dashboard",
+        terminalUUID: TERMINAL_UUID,
       },
     }),
   });
@@ -43,6 +49,44 @@ async function getToken(): Promise<string> {
   };
 
   return cachedToken.token;
+}
+
+async function getToken(): Promise<string> {
+  if (cachedToken && Date.now() < cachedToken.expiresAt) {
+    return cachedToken.token;
+  }
+  return login();
+}
+
+interface KasaCloudResponse<T> {
+  error_code: number;
+  msg?: string;
+  result?: T;
+}
+
+async function postWithToken<T>(token: string, method: string): Promise<KasaCloudResponse<T>> {
+  const res = await fetch(`${CLOUD_URL}?token=${token}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ method }),
+  });
+  return res.json();
+}
+
+// Calls the cloud with the cached token; if the token was revoked, logs in once more and retries.
+async function cloudCall<T>(method: string): Promise<T> {
+  let data = await postWithToken<T>(await getToken(), method);
+
+  if (TOKEN_REVOKED_CODES.has(data.error_code)) {
+    console.warn(`[Kasa] token revoked (${data.error_code}), logging in again`);
+    cachedToken = null;
+    data = await postWithToken<T>(await login(), method);
+  }
+
+  if (data.error_code !== 0 || data.result === undefined) {
+    throw new Error(`Kasa ${method} failed: ${JSON.stringify(data)}`);
+  }
+  return data.result;
 }
 
 interface KasaCloudDevice {
@@ -89,20 +133,12 @@ async function getLocalSwitches(): Promise<Map<string, KasaLocalSwitch>> {
 }
 
 export async function getKasaDevices(): Promise<Device[]> {
-  const token = await getToken();
-
-  const res = await fetch(`${CLOUD_URL}?token=${token}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ method: "getDeviceList" }),
-  });
-
-  const data = await res.json();
-  if (data.error_code !== 0 || !data.result?.deviceList) {
-    throw new Error("Kasa device list failed: " + JSON.stringify(data));
+  const { deviceList } = await cloudCall<{ deviceList?: KasaCloudDevice[] }>("getDeviceList");
+  if (!deviceList) {
+    throw new Error("Kasa device list failed: response has no deviceList");
   }
 
-  const list = data.result.deviceList as KasaCloudDevice[];
+  const list = deviceList;
   const isSmart = (d: KasaCloudDevice) => d.deviceType?.startsWith("SMART.");
 
   // The legacy cloud always reports SMART.* devices as offline; ask the local proxy
