@@ -31,10 +31,12 @@ export const DEVICE_ROOM_MAP: Record<string, string> = {
   "hue-7": "suite-principal",               // Abajur direito do quarto
   "hue-9": "suite-principal",               // Abajur Esquerdo do Quarto
   "ebc7a24cc4778feabeu0jv": "suite-principal", // Temperatura Suíte
+  "kasa-803B56EFAA999A7BF1A4CBEFC78D0B5A24EF9528": "suite-principal", // Ventilador do Quarto (Kasa)
 
   // Quarto Victoria
   "hue-1": "quarto-victoria",              // Abajur
   "eb753fc5d490d52529mge5": "quarto-victoria", // Temperatura Quarto Victoria
+  "kasa-803B58BF29B8274A05516304B38E41B024EEB1C6": "quarto-victoria", // Ventilador do Quarto da Victoria (Kasa)
 
   // Quarto de Visitas
   "hue-10": "quarto-visitas",               // Abajur Esquerdo QV
@@ -58,6 +60,8 @@ export const DEVICE_ROOM_MAP: Record<string, string> = {
 
   // Escritório
   "eb53e5b6e3dbee763521qa": "escritorio",   // Hub Zigbee X5
+  "kasa-803BD6D4E749361835C3DDD6A1A6242524EEFDFA": "escritorio", // Luz do Escritorio (Kasa)
+  "kasa-803B83402FC04D862E071619B6E03E7F24EF44C3": "escritorio", // Ventilador do Escritorio (Kasa)
 };
 
 export function getDeviceRoom(deviceId: string): string | null {

@@ -4,6 +4,7 @@ import { readFile, unlink, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
+import { listSwitches, setSwitch } from "./kasa-switches.mjs";
 
 const execFileAsync = promisify(execFile);
 
@@ -14,6 +15,26 @@ const KASA_EMAIL = process.env.KASA_EMAIL || "";
 const KASA_PASSWORD = process.env.KASA_PASSWORD || "";
 
 const auth = Buffer.from(`${KASA_EMAIL}:${KASA_PASSWORD}`).toString("base64");
+
+// Shared secret for endpoints that change device state (set on both sides:
+// PROXY_SECRET here, KASA_PROXY_SECRET in the Next.js app). Empty = no check.
+const PROXY_SECRET = process.env.PROXY_SECRET || "";
+
+function isAuthorized(req) {
+  return !PROXY_SECRET || req.headers["x-proxy-key"] === PROXY_SECRET;
+}
+
+function sendJson(res, status, body) {
+  res.writeHead(status, { "Content-Type": "application/json" });
+  res.end(JSON.stringify(body));
+}
+
+async function readJsonBody(req) {
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  const raw = Buffer.concat(chunks).toString("utf8");
+  return raw ? JSON.parse(raw) : {};
+}
 
 // --- Camera IP Discovery ---
 let resolvedIP = KASA_CAMERA_IP_HINT;
@@ -46,7 +67,7 @@ async function findCameraIP() {
 
   // Search ARP table
   try {
-    const { stdout } = await execFileAsync("arp", ["-a"], { timeout: 5000 });
+    const { stdout } = await execFileAsync("/usr/sbin/arp", ["-an"], { timeout: 5000 });
     const lines = stdout.split("\n");
     for (const line of lines) {
       const lower = line.toLowerCase();
@@ -207,7 +228,8 @@ const MIME = {
 
 const server = http.createServer(async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-proxy-key");
 
   if (req.url?.startsWith("/snapshot")) {
     try {
@@ -251,6 +273,34 @@ const server = http.createServer(async (req, res) => {
     stopHls();
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ ok: true }));
+  } else if (req.url === "/kasa/devices" && req.method === "GET") {
+    // State of the new-generation Kasa switches (KLAP over LAN)
+    try {
+      const devices = await listSwitches();
+      res.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
+      res.end(JSON.stringify({ devices, updatedAt: new Date().toISOString() }));
+    } catch (err) {
+      console.error("[Kasa] list failed:", err.message);
+      sendJson(res, 500, { error: "Failed to list Kasa switches" });
+    }
+  } else if (/^\/kasa\/devices\/[A-Za-z0-9]+\/set$/.test(req.url || "") && req.method === "POST") {
+    if (!isAuthorized(req)) {
+      sendJson(res, 401, { error: "Unauthorized" });
+      return;
+    }
+    const deviceId = req.url.split("/")[3];
+    try {
+      const body = await readJsonBody(req);
+      if (typeof body.on !== "boolean") {
+        sendJson(res, 400, { error: "Body must be {\"on\": boolean}" });
+        return;
+      }
+      const result = await setSwitch(deviceId, body.on);
+      sendJson(res, 200, { ok: true, ...result });
+    } catch (err) {
+      console.error(`[Kasa] set ${deviceId} failed:`, err.message);
+      sendJson(res, err.status || 502, { error: err.message });
+    }
   } else if (req.url === "/discover") {
     ipLastChecked = 0; // force re-scan
     const ip = await findCameraIP();
@@ -266,7 +316,8 @@ server.listen(PORT, () => {
   console.log(`Local proxy running on http://localhost:${PORT}`);
   console.log(`Kasa camera MAC: ${KASA_CAMERA_MAC}`);
   console.log(`Kasa camera IP hint: ${KASA_CAMERA_IP_HINT || "none (will auto-discover)"}`);
-  console.log(`Endpoints: /snapshot, /live/stream.m3u8, /live/stop, /discover`);
+  console.log(`Endpoints: /snapshot, /live/stream.m3u8, /live/stop, /discover, /kasa/devices, /kasa/devices/:id/set`);
+  console.log(`Kasa switch control: ${PROXY_SECRET ? "protected by PROXY_SECRET" : "UNPROTECTED (set PROXY_SECRET)"}`);
 
   // Pre-discover camera on startup
   findCameraIP().then((ip) => {

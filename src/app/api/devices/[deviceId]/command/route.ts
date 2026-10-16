@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { sendCommand as sendTuyaCommand } from "@/services/tuya/client";
 import { setHueLightState, activateHueScene, setHueGroupState } from "@/services/hue/client";
 import { setHubSpaceAttribute } from "@/services/hubspace/client";
+import { setKasaSwitch } from "@/services/kasa/client";
 
 export async function POST(
   request: NextRequest,
@@ -72,6 +73,17 @@ export async function POST(
         }
       }
 
+      return NextResponse.json({ success: true });
+    }
+
+    // Kasa switch (new-generation, controlled over LAN through the local proxy)
+    if (deviceId.startsWith("kasa-")) {
+      const kasaId = deviceId.replace("kasa-", "");
+      for (const cmd of commands) {
+        if (cmd.code === "switch_led" || cmd.code === "switch" || cmd.code === "on") {
+          await setKasaSwitch(kasaId, Boolean(cmd.value));
+        }
+      }
       return NextResponse.json({ success: true });
     }
 
