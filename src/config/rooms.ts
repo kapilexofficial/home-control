@@ -45,6 +45,7 @@ export const DEVICE_ROOM_MAP: Record<string, string> = {
   // Piscina
   "ring-620964375": "piscina",              // Piscina 01
   "ring-576007110": "piscina",              // Piscina 02
+  "eb25035c1b9e9d72d4xnqg": "piscina",      // Ventilador da Piscina (Tuya)
 
   // Frente da Casa
   "eb5fcc4488f8686397zjy9_ch1": "frente",   // Luzes da Frente
